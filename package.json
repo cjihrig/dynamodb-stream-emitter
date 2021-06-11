@@ -1,0 +1,34 @@
+{
+  "name": "dynamodb-stream-emitter",
+  "version": "0.1.0",
+  "description": "EventEmitter adapter for DynamoDB streams",
+  "license": "MIT",
+  "author": "Colin J. Ihrig <cjihrig@gmail.com> (http://www.cjihrig.com/)",
+  "main": "lib/index.js",
+  "homepage": "https://github.com/cjihrig/dynamodb-stream-emitter#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjihrig/dynamodb-stream-emitter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cjihrig/dynamodb-stream-emitter/issues"
+  },
+  "scripts": {
+    "lint": "belly-button -f",
+    "pretest": "npm run lint",
+    "test": "lab -v -t 99 -m 10000"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "devDependencies": {
+    "@hapi/lab": "24.x.x",
+    "belly-button": "7.x.x"
+  },
+  "keywords": [
+    "dynamodb",
+    "streams",
+    "event",
+    "emitter"
+  ]
+}

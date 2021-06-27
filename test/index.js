@@ -82,6 +82,155 @@ describe('DynamoDBStreamEmitter', () => {
         ee.start();
       }, /^Error: already started$/);
     });
+
+    it('start() emits the "start" event', () => {
+      return new Promise((resolve) => {
+        const client = new MockClient([
+          Fixtures.simpleListResult
+        ]);
+        const ee = new DynamoDBStreamEmitter({ client });
+
+        ee.on('start', (arg) => {
+          Assert.strictEqual(arg, undefined);
+          resolve();
+        });
+
+        ee.start();
+      });
+    });
+
+    it('stop() emits the "stop" event', () => {
+      return new Promise((resolve) => {
+        const client = new MockClient([
+          Fixtures.simpleListResult
+        ]);
+        const ee = new DynamoDBStreamEmitter({ client });
+
+        ee.on('stop', (state) => {
+          Assert.strictEqual(state instanceof Map, true);
+          resolve();
+        });
+
+        ee.start();
+        ee.stop();
+      });
+    });
+
+    it('stop() can be called multiple times', () => {
+      return new Promise((resolve) => {
+        const client = new MockClient([
+          Fixtures.simpleListResult
+        ]);
+        const ee = new DynamoDBStreamEmitter({ client });
+        let stopEmitted = false;
+
+        ee.on('stop', (state) => {
+          Assert.strictEqual(stopEmitted, false);
+          stopEmitted = true;
+          resolve();
+        });
+
+        ee.start();
+        ee.stop();
+        ee.stop();
+      });
+    });
+
+    it('start() validates the optional initial state', () => {
+      const ee = new DynamoDBStreamEmitter({ client: inactiveClient });
+
+      Assert.throws(() => {
+        ee.start(null);
+      }, /^TypeError: initialGlobalState must be an Array or Map$/);
+
+      Assert.throws(() => {
+        ee.start(new Map([[5]]));
+      }, /^TypeError: shard identifier 5 must be a string$/);
+
+      Assert.throws(() => {
+        ee.start(new Map([['shard-id']]));
+      }, /^TypeError: shard shard-id state must be an object$/);
+
+      Assert.throws(() => {
+        ee.start(new Map([['shard-id', { streamArn: null }]]));
+      }, /^TypeError: shard shard-id streamArn must be a string$/);
+
+      Assert.throws(() => {
+        ee.start(new Map([
+          ['shard-id', { streamArn: 'stream-arn', iteratorType: 5 }]
+        ]));
+      }, /^TypeError: shard shard-id iteratorType must be a string$/);
+
+      Assert.throws(() => {
+        ee.start(new Map([
+          ['shard-id', {
+            streamArn: 'stream-arn',
+            iteratorType: 'iterator-type',
+            shardId: 5
+          }]
+        ]));
+      }, /^Error: shard shard-id has mismatched shardId: 5$/);
+
+      Assert.throws(() => {
+        ee.start(new Map([
+          ['shard-id', {
+            streamArn: 'stream-arn',
+            iteratorType: 'iterator-type',
+            shardId: 'shard-id',
+            lastSequenceNumber: null
+          }]
+        ]));
+      }, /^TypeError: shard shard-id lastSequenceNumber must be a string$/);
+    });
+
+    it('start() accepts an array representation of a Map', () => {
+      const ee = new DynamoDBStreamEmitter({ client: inactiveClient });
+      const initialState = [
+        ['shard-id', {
+          streamArn: 'stream-arn',
+          iteratorType: 'iterator-type',
+          shardId: 'shard-id'
+        }],
+        ['shard-id-2', {
+          streamArn: 'stream-arn',
+          iteratorType: 'iterator-type',
+          shardId: 'shard-id-2'
+        }]
+      ];
+
+      ee.start(initialState);
+    });
+
+    it('the "stop" event waits for the "start" event', () => {
+      return new Promise((resolve) => {
+        const client = new MockClient([
+          Fixtures.simpleListResult
+        ]);
+        const ee = new DynamoDBStreamEmitter({ client });
+        const initialState = new Map([
+          ['shard-id', {
+            streamArn: 'stream-arn',
+            iteratorType: 'iterator-type',
+            shardId: 'shard-id',
+            lastSequenceNumber: '000000000000000000001'
+          }]
+        ]);
+        let startEmitted = false;
+
+        ee.on('start', () => {
+          startEmitted = true;
+        });
+
+        ee.on('stop', (state) => {
+          Assert.strictEqual(startEmitted, true);
+          Assert.deepStrictEqual(state, initialState);
+          resolve();
+        });
+
+        ee.start(initialState);
+        ee.stop();
+      });
+    });
   });
 
   describe('listStreams()', () => {
@@ -290,6 +439,7 @@ describe('DynamoDBStreamEmitter', () => {
                 Fixtures.multishardPaginatedDescribeResult2.StreamDescription.StreamArn);
               Assert.strictEqual(shardId,
                 Fixtures.multishardPaginatedDescribeResult2.StreamDescription.Shards[1].ShardId);
+
               // Give time for the sleep calls to run.
               setTimeout(() => {
                 resolve();

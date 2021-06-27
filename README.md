@@ -43,10 +43,14 @@ The `DynamoDBStreamEmitter` class is an abstraction around the AWS SDK's `Dynamo
 
 Constructs a new `DynamoDBStreamEmitter` instance.
 
-### `DynamoDBStreamEmitter.prototype.start()`
+### `DynamoDBStreamEmitter.prototype.start(initialState)`
 
   - Arguments
-    - None
+    - `state` (Map or array representation of a Map) - A map of shard IDs (string) to shard states (object) to poll on. Only shards belonging to streams that the emitter is polling are processed. The schema of each shard state is:
+      - `streamArn` (string) - The stream ARN of the shard.
+      - `shardId` (string) - The shard identifier.
+      - `iteratorType` (string) - The type of DynamoDB shard iterator to create. If `lastSequenceNumber` is present, this field will be set to `'AFTER_SEQUENCE_NUMBER'`.
+      - `lastSequenceNumber` (string) - The sequence number in the shard to resume reading after. Optional.
   - Returns
     - Nothing
 
@@ -78,3 +82,19 @@ This function returns a boolean indicating whether the emitter is polling or not
     - `shardId` (string) - The shard identifier that produced `record`.
 
 This event is emitted each time a new record is read from the stream.
+
+### `'start'` Event
+
+  - Arguments
+    - None
+
+This event is emitted once `DynamoDBStreamEmitter.prototype.start()` has been called and stream polling has begun.
+
+### `'stop'` Event
+
+  - Arguments
+    - `state` (Map) - The current state of all DynamoDB streams being polled by the emitter.
+
+This event is emitted once `DynamoDBStreamEmitter.prototype.stop()` has been called and any existing DynamoDB polling streams are shutdown. The current state of all existing streams is also provided as an argument to the event handler.
+
+The state is represented as a JavaScript [Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map). The state `Map` can be passed to `DynamoDBStreamEmitter.prototype.start()` in order to resume listening. The state `Map` can be serialized to JSON using `JSON.stringify(Array.from(state))` and deserialized back to a `Map` using `new Map(JSON.parse(jsonString))`.

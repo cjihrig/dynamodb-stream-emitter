@@ -5,6 +5,7 @@
   "license": "MIT",
   "author": "Colin J. Ihrig <cjihrig@gmail.com> (http://www.cjihrig.com/)",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "homepage": "https://github.com/cjihrig/dynamodb-stream-emitter#readme",
   "repository": {
     "type": "git",
